@@ -18,33 +18,35 @@ export default function AppShell() {
   useEffect(() => { load() }, [load])
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      {/* Top header */}
-      <header className="sticky top-0 z-20 bg-white border-b border-gray-200 pt-safe">
-        <div className="flex items-center justify-between px-4 h-14">
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-primary-600 flex items-center justify-center">
-              <span className="text-white font-bold text-xs">M</span>
+    <div className="min-h-screen bg-gray-100 flex justify-center">
+      <div className="w-full max-w-md bg-gray-50 flex flex-col min-h-screen relative">
+        {/* Top header */}
+        <header className="sticky top-0 z-20 bg-white border-b border-gray-200 pt-safe">
+          <div className="flex items-center justify-between px-4 h-14">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-lg bg-primary-600 flex items-center justify-center">
+                <span className="text-white font-bold text-xs">M</span>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 leading-none">Famiglia</p>
+                <p className="text-sm font-semibold text-gray-900 leading-tight">{family?.name || 'MealMate'}</p>
+              </div>
             </div>
-            <div>
-              <p className="text-xs text-gray-500 leading-none">Famiglia</p>
-              <p className="text-sm font-semibold text-gray-900 leading-tight">{family?.name || 'MealMate'}</p>
-            </div>
+            <NotificationBell />
           </div>
-          <NotificationBell />
-        </div>
-      </header>
+        </header>
 
-      {/* Page content */}
-      <main className="flex-1 pb-20">
-        <Outlet />
-      </main>
+        {/* Page content */}
+        <main className="flex-1 pb-20">
+          <Outlet />
+        </main>
 
-      {/* Bottom navigation */}
-      <BottomNav />
+        {/* Bottom navigation */}
+        <BottomNav />
 
-      {/* Global WebSocket listener */}
-      <GlobalWSListener />
+        {/* Global WebSocket listener */}
+        <GlobalWSListener />
+      </div>
     </div>
   )
 }
