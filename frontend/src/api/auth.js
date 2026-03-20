@@ -5,7 +5,7 @@ export const authApi = {
     client.post('/auth/login/', { email, password }),
 
   register: (name, email, password, password2) =>
-    client.post('/auth/register/', { name, email, password, password2 }),
+    client.post('/auth/register/', { name, email, password, password_confirm: password2 }),
 
   logout: (refresh) =>
     client.post('/auth/logout/', { refresh }),
@@ -20,7 +20,7 @@ export const authApi = {
     client.post('/auth/password/reset/', { email }),
 
   passwordConfirm: (token, uid, password, password2) =>
-    client.post('/auth/password/confirm/', { token, uid, password, password2 }),
+    client.post('/auth/password/confirm/', { token, uid, new_password: password, new_password_confirm: password2 }),
 
   lookupUser: (email) =>
     client.get('/auth/users/lookup/', { params: { email } }),
