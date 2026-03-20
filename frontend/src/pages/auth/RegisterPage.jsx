@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { useAuthStore } from '../../store/authStore'
@@ -6,20 +7,46 @@ import toast from 'react-hot-toast'
 export default function RegisterPage() {
   const navigate = useNavigate()
   const { register: registerUser } = useAuthStore()
-  const { register, handleSubmit, watch, formState: { errors, isSubmitting } } = useForm()
+  const { register, handleSubmit, watch, setError, formState: { errors, isSubmitting } } = useForm()
   const password = watch('password', '')
+  const [serverErrors, setServerErrors] = useState({})
 
   async function onSubmit({ name, email, password, password2 }) {
+    setServerErrors({})
     try {
       await registerUser(name, email, password, password2)
       navigate('/family/setup', { replace: true })
     } catch (err) {
       const data = err.response?.data
       if (data) {
-        const msg = Object.values(data).flat().join(', ')
-        toast.error(msg)
+        // Map server field errors back to form fields
+        const fieldMap = { password_confirm: 'password2' }
+        let hasFieldError = false
+        const newServerErrors = {}
+
+        Object.entries(data).forEach(([field, msgs]) => {
+          const formField = fieldMap[field] || field
+          const msgStr = Array.isArray(msgs) ? msgs.join(', ') : String(msgs)
+          if (['name', 'email', 'password', 'password2'].includes(formField)) {
+            setError(formField, { type: 'server', message: msgStr })
+            hasFieldError = true
+          } else if (field !== 'non_field_errors') {
+            newServerErrors[field] = msgStr
+          }
+        })
+
+        // non_field_errors or unmapped errors → toast
+        const nonField = data.non_field_errors || data.detail
+        const extra = Object.values(newServerErrors).join(', ')
+        const toastMsg = [
+          ...(nonField ? (Array.isArray(nonField) ? nonField : [String(nonField)]) : []),
+          ...(extra ? [extra] : []),
+        ].join(', ')
+
+        if (toastMsg) toast.error(toastMsg)
+        else if (!hasFieldError) toast.error('Registrazione fallita')
       } else {
-        toast.error('Registrazione fallita')
+        toast.error('Errore di rete. Riprova.')
       }
     }
   }
@@ -62,8 +89,11 @@ export default function RegisterPage() {
             <input
               className="input"
               type="password"
-              placeholder="Almeno 8 caratteri"
-              {...register('password', { required: 'Password obbligatoria', minLength: { value: 8, message: 'Almeno 8 caratteri' } })}
+              placeholder="Almeno 8 caratteri, non comune"
+              {...register('password', {
+                required: 'Password obbligatoria',
+                minLength: { value: 8, message: 'Almeno 8 caratteri' },
+              })}
             />
             {errors.password && <p className="text-xs text-red-500 mt-1">{errors.password.message}</p>}
           </div>
@@ -81,6 +111,10 @@ export default function RegisterPage() {
             />
             {errors.password2 && <p className="text-xs text-red-500 mt-1">{errors.password2.message}</p>}
           </div>
+
+          <p className="text-xs text-gray-400">
+            La password deve avere almeno 8 caratteri e non essere troppo semplice (es. evita "password123").
+          </p>
 
           <button type="submit" className="btn-primary w-full" disabled={isSubmitting}>
             {isSubmitting ? 'Registrazione...' : 'Crea account'}
