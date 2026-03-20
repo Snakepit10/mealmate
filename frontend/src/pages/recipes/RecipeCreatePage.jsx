@@ -180,8 +180,8 @@ export default function RecipeCreatePage() {
         for (const ing of ingredients) {
           if (ing.product_id) {
             await recipesApi.addIngredient(recipeId, {
-              product: ing.product_id,                          // serializer si aspetta "product", non "product_id"
-              quantity: parseFloat(ing.quantity) || null,       // DecimalField: solo numero, es. "350 g" → 350
+              product: ing.product_id,   // serializer si aspetta "product", non "product_id"
+              quantity: ing.quantity || '',  // CharField: testo libero "350 g", "q.b.", ecc.
               is_optional: ing.is_optional,
               note: ing.note || '',
               order: ingredients.indexOf(ing),

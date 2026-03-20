@@ -101,7 +101,7 @@ class RecipeIngredient(TimeStampedModel):
         on_delete=models.CASCADE,
         related_name='recipe_ingredients',
     )
-    quantity = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
+    quantity = models.CharField(max_length=50, blank=True, help_text='Quantità libera, es. "350 g", "2 porzioni", "q.b."')
     unit = models.ForeignKey(
         'products.UnitOfMeasure',
         on_delete=models.SET_NULL,
