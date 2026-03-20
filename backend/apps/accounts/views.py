@@ -1,3 +1,5 @@
+import logging
+
 from django.contrib.auth import get_user_model
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.encoding import force_bytes, force_str
@@ -19,6 +21,7 @@ from .serializers import (
 )
 
 User = get_user_model()
+logger = logging.getLogger(__name__)
 
 
 class RegisterView(APIView):
@@ -26,7 +29,13 @@ class RegisterView(APIView):
 
     def post(self, request):
         serializer = RegisterSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
+        if not serializer.is_valid():
+            logger.warning(
+                'Register validation failed for email=%r: %s',
+                request.data.get('email', '<missing>'),
+                serializer.errors,
+            )
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         user = serializer.save()
         refresh = RefreshToken.for_user(user)
         return Response({
