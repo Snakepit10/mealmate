@@ -4,8 +4,15 @@ export const authApi = {
   login: (email, password) =>
     client.post('/auth/login/', { email, password }),
 
-  register: (name, email, password, password2) =>
-    client.post('/auth/register/', { name, email, password, password_confirm: password2 }),
+  register: (name, email, password, password2) => {
+    const payload = {
+      name,
+      email,
+      password,
+      password_confirm: password2,
+    }
+    return client.post('/auth/register/', payload)
+  },
 
   logout: (refresh) =>
     client.post('/auth/logout/', { refresh }),
