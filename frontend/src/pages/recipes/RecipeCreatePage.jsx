@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, Plus, Trash2, GripVertical } from 'lucide-react'
+import { ArrowLeft, Plus, Trash2, GripVertical, Link } from 'lucide-react'
 import { useForm, useFieldArray } from 'react-hook-form'
 import { recipesApi } from '../../api/recipes'
 import { useAuthStore } from '../../store/authStore'
@@ -20,6 +20,9 @@ export default function RecipeCreatePage() {
   const [saving, setSaving] = useState(false)
   const [coverImageFile, setCoverImageFile] = useState(null)
   const [coverImagePreview, setCoverImagePreview] = useState(null)
+  const [importUrl, setImportUrl] = useState('')
+  const [importOpen, setImportOpen] = useState(false)
+  const [importing, setImporting] = useState(false)
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm({
     defaultValues: {
@@ -63,6 +66,54 @@ export default function RecipeCreatePage() {
     }
     load()
   }, [id, isEdit, reset])
+
+  async function handleImport() {
+    if (!importUrl.trim()) return
+    setImporting(true)
+    try {
+      const { data } = await recipesApi.importUrl(importUrl.trim())
+      reset({
+        title: data.title || '',
+        description: data.description || '',
+        servings: data.servings ?? '',
+        prep_time: data.prep_time ?? '',
+        cook_time: data.cook_time ?? '',
+        difficulty: 'easy',
+        is_public: false,
+        is_draft: false,
+      })
+      if (data.steps?.length) {
+        setSteps(data.steps.map((text) => ({ text })))
+      }
+      if (data.ingredients?.length) {
+        // Gli ingredienti importati sono testo libero — l'utente li collegherà ai prodotti
+        setIngredients(data.ingredients.map((raw) => ({
+          product: null,
+          product_id: null,
+          quantity: '',
+          is_optional: false,
+          note: raw,
+        })))
+      }
+      if (data.image_url) {
+        setCoverImagePreview(data.image_url)
+      }
+      setImportOpen(false)
+      setImportUrl('')
+      toast.success('Ricetta importata! Controlla ingredienti e dati.')
+    } catch (err) {
+      const status = err.response?.status
+      if (status === 422) {
+        toast.error('Impossibile estrarre la ricetta da questo sito.')
+      } else if (status === 503) {
+        toast.error('Servizio di importazione non disponibile.')
+      } else {
+        toast.error("Errore durante l'importazione.")
+      }
+    } finally {
+      setImporting(false)
+    }
+  }
 
   function addIngredient(product) {
     setIngredients((prev) => [...prev, { product, product_id: product.id, quantity: '', is_optional: false, note: '' }])
@@ -170,6 +221,57 @@ export default function RecipeCreatePage() {
         </button>
       </div>
 
+      {/* Import da URL — solo in creazione */}
+      {!isEdit && (
+        <div className="px-4 pt-3">
+          {!importOpen ? (
+            <button
+              type="button"
+              onClick={() => setImportOpen(true)}
+              className="w-full flex items-center justify-center gap-2 py-2.5 px-4 border border-dashed border-primary-400 rounded-xl text-primary-600 text-sm font-medium hover:bg-primary-50 transition-colors"
+            >
+              <Link size={15} />
+              Importa da link
+            </button>
+          ) : (
+            <div className="card p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-semibold text-gray-800 flex items-center gap-1.5">
+                  <Link size={14} /> Importa ricetta da URL
+                </p>
+                <button
+                  type="button"
+                  onClick={() => { setImportOpen(false); setImportUrl('') }}
+                  className="text-xs text-gray-400 hover:text-gray-600"
+                >
+                  Annulla
+                </button>
+              </div>
+              <input
+                className="input text-sm"
+                type="url"
+                placeholder="https://ricette.giallozafferano.it/..."
+                value={importUrl}
+                onChange={(e) => setImportUrl(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleImport()}
+                autoFocus
+              />
+              <p className="text-xs text-gray-400">
+                Funziona con GialloZafferano, BBC Good Food e altri siti che usano lo standard schema.org/Recipe.
+              </p>
+              <button
+                type="button"
+                onClick={handleImport}
+                disabled={importing || !importUrl.trim()}
+                className="btn-primary text-sm w-full"
+              >
+                {importing ? 'Importazione in corso...' : 'Importa'}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
       <form onSubmit={handleSubmit(onSubmit)} className="px-4 pt-4 space-y-5">
         {/* Basic info */}
         <div className="card p-4 space-y-3">
@@ -233,7 +335,11 @@ export default function RecipeCreatePage() {
           {ingredients.map((ing, idx) => (
             <div key={idx} className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">{ing.product?.name}</p>
+                <p className="text-sm font-medium truncate">
+                  {ing.product?.name ?? (
+                    <span className="text-amber-600 italic text-xs">{ing.note || 'Da collegare'}</span>
+                  )}
+                </p>
                 <div className="flex items-center gap-2 mt-1">
                   <input
                     className="input text-xs py-1 w-20"
