@@ -15,19 +15,19 @@ class UserSerializer(serializers.ModelSerializer):
 
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, validators=[validate_password])
-    password_confirm = serializers.CharField(write_only=True)
+    password2 = serializers.CharField(write_only=True)
 
     class Meta:
         model = User
-        fields = ('email', 'name', 'password', 'password_confirm')
+        fields = ('email', 'name', 'password', 'password2')
 
     def validate(self, attrs):
-        if attrs['password'] != attrs['password_confirm']:
+        if attrs['password'] != attrs['password2']:
             raise serializers.ValidationError({'password': 'Le password non coincidono.'})
         return attrs
 
     def create(self, validated_data):
-        validated_data.pop('password_confirm')
+        validated_data.pop('password2')
         return User.objects.create_user(**validated_data)
 
 
@@ -46,10 +46,10 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
     token = serializers.CharField()
     uid = serializers.CharField()
     new_password = serializers.CharField(validators=[validate_password])
-    new_password_confirm = serializers.CharField()
+    new_password2 = serializers.CharField()
 
     def validate(self, attrs):
-        if attrs['new_password'] != attrs['new_password_confirm']:
+        if attrs['new_password'] != attrs['new_password2']:
             raise serializers.ValidationError({'new_password': 'Le password non coincidono.'})
         return attrs
 
