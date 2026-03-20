@@ -14,7 +14,10 @@ export default function LoginPage() {
       await login(email, password)
       navigate('/pantry', { replace: true })
     } catch (err) {
-      const msg = err.response?.data?.detail || err.response?.data?.error || 'Credenziali non valide'
+      const d = err.response?.data
+      const msg = (typeof d?.detail === 'string' ? d.detail : null) ||
+                  (typeof d?.error === 'string' ? d.error : null) ||
+                  'Credenziali non valide'
       toast.error(msg)
     }
   }

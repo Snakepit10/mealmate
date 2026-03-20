@@ -23,12 +23,16 @@ function processQueue(error, token = null) {
   failedQueue = []
 }
 
+// URLs that should not trigger the 401 refresh/redirect logic
+const AUTH_URLS = ['/auth/login/', '/auth/register/', '/auth/token/refresh/']
+
 client.interceptors.response.use(
   (res) => res,
   async (error) => {
     const original = error.config
+    const isAuthEndpoint = AUTH_URLS.some((u) => original?.url?.includes(u))
 
-    if (error.response?.status === 401 && !original._retry) {
+    if (error.response?.status === 401 && !original._retry && !isAuthEndpoint) {
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject })
