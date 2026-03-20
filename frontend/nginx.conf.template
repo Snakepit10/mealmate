@@ -7,6 +7,14 @@ server {
     gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript;
     gzip_min_length 1000;
 
+    # Service worker e manifest NON vanno mai messi in cache
+    # (sw.js non ha hash nel nome, il browser deve sempre rilevare gli aggiornamenti)
+    location ~* (sw\.js|workbox-.+\.js|\.webmanifest)$ {
+        expires -1;
+        add_header Cache-Control "no-cache, no-store, must-revalidate";
+        add_header Pragma "no-cache";
+    }
+
     # SPA: tutte le route puntano a index.html
     location / {
         try_files $uri $uri/ /index.html;
