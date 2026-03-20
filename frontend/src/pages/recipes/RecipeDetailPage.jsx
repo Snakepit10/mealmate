@@ -130,8 +130,8 @@ export default function RecipeDetailPage() {
     <div className="pb-6">
       {/* Cover */}
       <div className="relative">
-        {recipe.cover_image
-          ? <img src={recipe.cover_image} alt={recipe.title} className="w-full h-56 object-cover" />
+        {(recipe.cover_image || recipe.cover_image_url)
+          ? <img src={recipe.cover_image || recipe.cover_image_url} alt={recipe.title} className="w-full h-56 object-cover" />
           : <div className="w-full h-56 bg-gradient-to-br from-primary-100 to-primary-300 flex items-center justify-center">
               <span className="text-6xl">🍽️</span>
             </div>

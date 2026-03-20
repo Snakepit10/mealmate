@@ -6,7 +6,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.pantry.models import PantryItem
-from integrations.recipe_importer import import_from_url
+from apps.products.models import Product, ProductCategory
+from integrations.recipe_importer import import_from_url, parse_ingredient_text
 
 from .models import Recipe, RecipeCategory, RecipeIngredient, RecipeInstruction, RecipeRating, RecipeReport
 from .serializers import (
@@ -240,7 +241,6 @@ class RecipeImportView(APIView):
             return Response({'detail': 'URL obbligatorio.'}, status=status.HTTP_400_BAD_REQUEST)
         try:
             data = import_from_url(url)
-            return Response(data)
         except NotImplementedError:
             return Response(
                 {'detail': 'Il modulo di importazione non è ancora configurato.'},
@@ -248,6 +248,45 @@ class RecipeImportView(APIView):
             )
         except Exception:
             return Response({'success': False, 'url': url}, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+
+        # Parse + auto-crea prodotti per ogni ingrediente grezzo
+        data['ingredients'] = self._resolve_ingredients(data.get('ingredients', []), request.user)
+        return Response(data)
+
+    @staticmethod
+    def _resolve_ingredients(raw_list, user):
+        """
+        Per ogni stringa ingrediente:
+        1. Separa nome e quantità con parse_ingredient_text()
+        2. Cerca un prodotto esistente per nome (case-insensitive)
+        3. Se non esiste, ne crea uno nuovo nella categoria "Altro"
+        Restituisce una lista di dict pronti per il frontend.
+        """
+        altro_cat = ProductCategory.objects.filter(name='Altro').first()
+        resolved = []
+        for raw in raw_list:
+            parsed = parse_ingredient_text(raw)
+            name = parsed['name']
+            quantity = parsed['quantity']
+            if not name:
+                continue
+            # Cerca prodotto esistente (nome esatto, case-insensitive)
+            product = Product.objects.filter(name__iexact=name).first()
+            if not product:
+                product = Product.objects.create(
+                    name=name,
+                    category=altro_cat,
+                    source='manual',
+                    created_by=user,
+                    type='food',
+                )
+            resolved.append({
+                'raw': raw,
+                'product_id': str(product.id),
+                'product_name': product.name,
+                'quantity': quantity,
+            })
+        return resolved
 
 
 # ── Ingredients ───────────────────────────────────────────────────────────────

@@ -40,6 +40,7 @@ class Recipe(TimeStampedModel):
     title = models.CharField(max_length=200)
     description = models.TextField(blank=True)
     cover_image = models.ImageField(upload_to='recipes/', blank=True, null=True)
+    cover_image_url = models.URLField(blank=True, help_text='URL esterno immagine copertina (fallback quando non c\'è cover_image)')
     external_link = models.URLField(blank=True)
     servings = models.PositiveSmallIntegerField(null=True, blank=True)
     prep_time = models.PositiveSmallIntegerField(null=True, blank=True, help_text='Minuti')

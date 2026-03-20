@@ -7,6 +7,22 @@ from bs4 import BeautifulSoup
 
 logger = logging.getLogger(__name__)
 
+# Unità di misura riconosciute (italiano + internazionale)
+_UNITS_RE = (
+    r'kg|gr?|mg|'
+    r'l(?:t)?|dl|cl|ml|'
+    r'cucchiai(?:o)?|cucchiaini?|'
+    r'tazze?|'
+    r'spicchi?|'
+    r'fette?|'
+    r'foglie?|'
+    r'rametti?|'
+    r'pizzico|pizzichi|'
+    r'mazzetti?|'
+    r'bustine?|'
+    r'prese?'
+)
+
 _HEADERS = {
     'User-Agent': (
         'Mozilla/5.0 (Linux; Android 10; Mobile) '
@@ -153,3 +169,52 @@ def _parse_image(v):
     if isinstance(v, dict):
         return _s(v.get('url', ''))
     return ''
+
+
+def parse_ingredient_text(raw: str) -> dict:
+    """
+    Analizza il testo grezzo di un ingrediente e separa nome e quantità.
+
+    Esempi:
+      "350 g di manzo macinato"  → {'name': 'Manzo macinato', 'quantity': '350 g'}
+      "2 uova"                   → {'name': 'Uova', 'quantity': '2'}
+      "1 cipolla bionda"         → {'name': 'Cipolla bionda', 'quantity': '1'}
+      "30 ml di latte"           → {'name': 'Latte', 'quantity': '30 ml'}
+      "manzo macinato 350 g"     → {'name': 'Manzo macinato', 'quantity': '350 g'}
+      "Sale"                     → {'name': 'Sale', 'quantity': ''}
+    """
+    # Rimuovi note tra parentesi per il nome prodotto (es. "o vitello macinato")
+    text = re.sub(r'\([^)]*\)', '', raw).strip()
+    text = re.sub(r'\s+', ' ', text).strip()
+    if not text:
+        return {'name': _cap(raw.strip()), 'quantity': ''}
+
+    # Pattern 1: "350 g di manzo macinato" — numero + unità in testa
+    m = re.match(
+        rf'^(\d+(?:[.,]\d+)?)\s*({_UNITS_RE})\b\.?\s*(?:di\s+)?(.+)$',
+        text, re.IGNORECASE,
+    )
+    if m:
+        qty = f'{m.group(1)} {m.group(2).lower()}'.strip()
+        return {'name': _cap(m.group(3).strip()), 'quantity': qty}
+
+    # Pattern 2: "2 uova" — numero senza unità in testa
+    m = re.match(r'^(\d+(?:[.,]\d+)?)\s+(\S.+)$', text)
+    if m:
+        return {'name': _cap(m.group(2).strip()), 'quantity': m.group(1)}
+
+    # Pattern 3: "manzo macinato 350 g" — quantità in coda
+    m = re.match(
+        rf'^(.+?)\s+(\d+(?:[.,]\d+)?\s*(?:{_UNITS_RE}))\s*$',
+        text, re.IGNORECASE,
+    )
+    if m:
+        return {'name': _cap(m.group(1).strip()), 'quantity': m.group(2).strip()}
+
+    # Fallback: tutto il testo come nome
+    return {'name': _cap(text), 'quantity': ''}
+
+
+def _cap(s: str) -> str:
+    """Prima lettera maiuscola, resto invariato."""
+    return s[:1].upper() + s[1:] if s else ''

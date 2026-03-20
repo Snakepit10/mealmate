@@ -20,6 +20,7 @@ export default function RecipeCreatePage() {
   const [saving, setSaving] = useState(false)
   const [coverImageFile, setCoverImageFile] = useState(null)
   const [coverImagePreview, setCoverImagePreview] = useState(null)
+  const [importedImageUrl, setImportedImageUrl] = useState(null)
   const [importUrl, setImportUrl] = useState('')
   const [importOpen, setImportOpen] = useState(false)
   const [importing, setImporting] = useState(false)
@@ -52,6 +53,10 @@ export default function RecipeCreatePage() {
           is_draft: r.is_draft || false,
         })
         if (r.cover_image) setCoverImagePreview(r.cover_image)
+        else if (r.cover_image_url) {
+          setCoverImagePreview(r.cover_image_url)
+          setImportedImageUrl(r.cover_image_url)
+        }
         setIngredients((iRes.data.results || iRes.data).map((i) => ({
           id: i.id,
           product: i.product,
@@ -86,17 +91,17 @@ export default function RecipeCreatePage() {
         setSteps(data.steps.map((text) => ({ text })))
       }
       if (data.ingredients?.length) {
-        // Gli ingredienti importati sono testo libero — l'utente li collegherà ai prodotti
-        setIngredients(data.ingredients.map((raw) => ({
-          product: null,
-          product_id: null,
-          quantity: '',
+        setIngredients(data.ingredients.map((ing) => ({
+          product: { id: ing.product_id, name: ing.product_name },
+          product_id: ing.product_id,
+          quantity: ing.quantity || '',
           is_optional: false,
-          note: raw,
+          note: '',
         })))
       }
       if (data.image_url) {
         setCoverImagePreview(data.image_url)
+        setImportedImageUrl(data.image_url)
       }
       setImportOpen(false)
       setImportUrl('')
@@ -148,6 +153,8 @@ export default function RecipeCreatePage() {
         servings: formData.servings ? parseInt(formData.servings) : null,
         prep_time: formData.prep_time ? parseInt(formData.prep_time) : null,
         cook_time: formData.cook_time ? parseInt(formData.cook_time) : null,
+        // Se abbiamo un URL immagine da importazione (non un file caricato), salvalo nel campo URL
+        cover_image_url: (!coverImageFile && importedImageUrl) ? importedImageUrl : undefined,
       }
 
       let recipeId = id
@@ -158,14 +165,14 @@ export default function RecipeCreatePage() {
         recipeId = data.id
       }
 
-      // Upload cover image if selected
+      // Upload cover image if selected (file locale ha precedenza sull'URL importato)
       if (coverImageFile) {
         const fd = new FormData()
         fd.append('cover_image', coverImageFile)
         await recipesApi.update(recipeId, fd)
       } else if (isEdit && coverImagePreview === null) {
         // User removed the image
-        await recipesApi.update(recipeId, { cover_image: null })
+        await recipesApi.update(recipeId, { cover_image: null, cover_image_url: '' })
       }
 
       // Save ingredients (delete all and recreate for simplicity)
@@ -281,7 +288,10 @@ export default function RecipeCreatePage() {
             preview={coverImageFile ? URL.createObjectURL(coverImageFile) : coverImagePreview}
             onChange={(file) => {
               setCoverImageFile(file)
-              if (!file) setCoverImagePreview(null)
+              if (!file) {
+                setCoverImagePreview(null)
+                setImportedImageUrl(null)
+              }
             }}
             aspectRatio="wide"
           />

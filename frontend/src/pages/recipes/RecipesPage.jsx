@@ -11,8 +11,8 @@ const DIFFICULTY_COLOR = { easy: 'text-green-600', medium: 'text-amber-600', har
 function RecipeCard({ recipe }) {
   return (
     <Link to={`/recipes/${recipe.id}`} className="card overflow-hidden hover:shadow-md transition-shadow">
-      {recipe.cover_image
-        ? <img src={recipe.cover_image} alt={recipe.title} className="w-full h-36 object-cover" />
+      {(recipe.cover_image || recipe.cover_image_url)
+        ? <img src={recipe.cover_image || recipe.cover_image_url} alt={recipe.title} className="w-full h-36 object-cover" />
         : <div className="w-full h-36 bg-gradient-to-br from-primary-100 to-primary-200 flex items-center justify-center">
             <UtensilsCrossed size={36} className="text-primary-400" />
           </div>

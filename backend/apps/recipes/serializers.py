@@ -56,7 +56,7 @@ class RecipeListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Recipe
         fields = (
-            'id', 'title', 'cover_image', 'difficulty', 'servings',
+            'id', 'title', 'cover_image', 'cover_image_url', 'difficulty', 'servings',
             'prep_time', 'cook_time', 'category', 'category_name',
             'is_public', 'is_draft', 'average_rating', 'ratings_count',
             'created_by', 'created_by_name', 'ingredients_count',
@@ -85,7 +85,7 @@ class CreateRecipeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Recipe
         fields = (
-            'title', 'description', 'cover_image', 'external_link',
+            'title', 'description', 'cover_image', 'cover_image_url', 'external_link',
             'servings', 'prep_time', 'cook_time', 'difficulty',
             'category', 'is_public', 'is_draft',
         )
