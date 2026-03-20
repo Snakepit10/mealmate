@@ -8,6 +8,8 @@ RUN npm ci
 COPY . .
 
 # Vite bake env vars at build time
+ARG VITE_API_URL
+ARG VITE_WS_BASE
 ENV VITE_API_URL=${VITE_API_URL}
 ENV VITE_WS_BASE=${VITE_WS_BASE}
 
