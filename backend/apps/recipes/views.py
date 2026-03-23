@@ -5,9 +5,13 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+import logging
+
 from apps.pantry.models import PantryItem
 from apps.products.models import Product, ProductCategory
 from integrations.recipe_importer import import_from_url, parse_ingredient_text
+
+logger = logging.getLogger(__name__)
 
 from .models import Recipe, RecipeCategory, RecipeIngredient, RecipeInstruction, RecipeRating, RecipeReport
 from .serializers import (
@@ -250,7 +254,11 @@ class RecipeImportView(APIView):
             return Response({'success': False, 'url': url}, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
 
         # Parse + auto-crea prodotti per ogni ingrediente grezzo
-        data['ingredients'] = self._resolve_ingredients(data.get('ingredients', []), request.user)
+        try:
+            data['ingredients'] = self._resolve_ingredients(data.get('ingredients', []), request.user)
+        except Exception as exc:
+            logger.error('RecipeImportView: _resolve_ingredients failed: %s', exc)
+            # In caso di errore grave, mantieni le stringhe originali
         return Response(data)
 
     @staticmethod
@@ -260,9 +268,14 @@ class RecipeImportView(APIView):
         1. Separa nome e quantità con parse_ingredient_text()
         2. Cerca un prodotto esistente per nome (case-insensitive)
         3. Se non esiste, ne crea uno nuovo nella categoria "Altro"
+           (get_or_create garantisce che la categoria esista sempre)
         Restituisce una lista di dict pronti per il frontend.
         """
-        altro_cat = ProductCategory.objects.filter(name='Altro').first()
+        # get_or_create: non dipende dall'ordine delle migration/fixtures
+        altro_cat, _ = ProductCategory.objects.get_or_create(
+            name='Altro',
+            defaults={'icon': '📦', 'order': 99, 'is_food': True},
+        )
         resolved = []
         for raw in raw_list:
             parsed = parse_ingredient_text(raw)
@@ -273,17 +286,21 @@ class RecipeImportView(APIView):
             # Cerca prodotto esistente (nome esatto, case-insensitive)
             product = Product.objects.filter(name__iexact=name).first()
             if not product:
-                product = Product.objects.create(
-                    name=name,
-                    category=altro_cat,
-                    source='manual',
-                    created_by=user,
-                    type='food',
-                )
+                try:
+                    product = Product.objects.create(
+                        name=name,
+                        category=altro_cat,
+                        source='manual',
+                        created_by=user,
+                        type='food',
+                    )
+                except Exception as exc:
+                    logger.warning('RecipeImportView: could not create product "%s": %s', name, exc)
             resolved.append({
                 'raw': raw,
-                'product_id': str(product.id),
-                'product_name': product.name,
+                'product_id': str(product.id) if product else None,
+                # Se la creazione del prodotto fallisce, restituiamo comunque il nome parsato
+                'product_name': product.name if product else name,
                 'quantity': quantity,
             })
         return resolved

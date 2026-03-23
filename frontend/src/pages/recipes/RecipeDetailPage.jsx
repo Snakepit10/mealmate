@@ -193,7 +193,8 @@ export default function RecipeDetailPage() {
               {ingredients.map((ing) => (
                 <div key={ing.id} className="flex items-center justify-between px-4 py-2.5">
                   <span className={`text-sm ${ing.is_optional ? 'text-gray-400 italic' : 'text-gray-900'}`}>
-                    {ing.product?.name}
+                    {/* product_name è il campo denormalizzato restituito dal serializer */}
+                    {ing.product_name || ing.product?.name || '—'}
                     {ing.is_optional && ' (opzionale)'}
                     {ing.note && <span className="text-gray-400"> — {ing.note}</span>}
                   </span>

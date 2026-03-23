@@ -59,8 +59,10 @@ export default function RecipeCreatePage() {
         }
         setIngredients((iRes.data.results || iRes.data).map((i) => ({
           id: i.id,
-          product: i.product,
-          product_id: i.product?.id,
+          // i.product dall'API è lo UUID stringa del prodotto (PrimaryKeyRelatedField),
+          // non un oggetto → costruiamo l'oggetto sintetico con product_name
+          product: i.product ? { id: i.product, name: i.product_name } : null,
+          product_id: i.product || null,
           quantity: i.quantity || '',
           is_optional: i.is_optional || false,
           note: i.note || '',
@@ -91,13 +93,19 @@ export default function RecipeCreatePage() {
         setSteps(data.steps.map((text) => ({ text })))
       }
       if (data.ingredients?.length) {
-        setIngredients(data.ingredients.map((ing) => ({
-          product: { id: ing.product_id, name: ing.product_name },
-          product_id: ing.product_id,
-          quantity: ing.quantity || '',
-          is_optional: false,
-          note: '',
-        })))
+        setIngredients(data.ingredients.map((ing) => {
+          // Supporta sia il nuovo formato (oggetto) che il vecchio (stringa grezza)
+          if (typeof ing === 'string') {
+            return { product: null, product_id: null, quantity: '', is_optional: false, note: ing }
+          }
+          return {
+            product: ing.product_id ? { id: ing.product_id, name: ing.product_name } : null,
+            product_id: ing.product_id || null,
+            quantity: ing.quantity || '',
+            is_optional: false,
+            note: '',
+          }
+        }))
       }
       if (data.image_url) {
         setCoverImagePreview(data.image_url)
