@@ -63,6 +63,7 @@ export default function RecipeCreatePage() {
           // non un oggetto → costruiamo l'oggetto sintetico con product_name
           product: i.product ? { id: i.product, name: i.product_name } : null,
           product_id: i.product || null,
+          product_name: i.product_name || '',  // fallback visivo se product è null
           quantity: i.quantity || '',
           is_optional: i.is_optional || false,
           note: i.note || '',
@@ -101,6 +102,7 @@ export default function RecipeCreatePage() {
           return {
             product: ing.product_id ? { id: ing.product_id, name: ing.product_name } : null,
             product_id: ing.product_id || null,
+            product_name: ing.product_name || '',  // fallback visivo se product è null
             quantity: ing.quantity || '',
             is_optional: false,
             note: '',
@@ -354,7 +356,7 @@ export default function RecipeCreatePage() {
             <div key={idx} className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium truncate">
-                  {ing.product?.name ?? (
+                  {ing.product?.name || ing.product_name || (
                     <span className="text-amber-600 italic text-xs">{ing.note || 'Da collegare'}</span>
                   )}
                 </p>
